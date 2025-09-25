@@ -47,6 +47,7 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const vector<Sphere> &
     float spheres_dist = numeric_limits<float>::max();
 
     for (size_t i=0; i < spheres.size(); i++) {
+        // Account for overlapping Sphere
         if (spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
             spheres_dist = dist_i;
             hit = orig + dir*dist_i;
@@ -54,6 +55,8 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const vector<Sphere> &
             material = spheres[i].material;
         }
     }
+
+    // Set to background color if too far
     return spheres_dist<1000;
 }
 
