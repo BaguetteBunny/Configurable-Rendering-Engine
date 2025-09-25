@@ -3,6 +3,33 @@
 #include <iostream>
 using namespace std;
 
+struct Sphere {
+    Vec3f center;
+    float radius;
+
+    Sphere(const Vec3f &c, const float &r) : center(c), radius(r) {}
+
+    bool ray_intersect(const Vec3f &origin, const Vec3f &direction, float &t0) const {
+        Vec3f L = center - origin;
+        float projection = L * direction;
+        float d2 = L*L - projection*projection;
+        float r2 = radius*radius;
+        
+        // Ray misses sphere
+        if (d2 > r2) return false;
+
+        float half_chord = sqrtf(r2 - d2);
+        t0 = projection - half_chord;
+        float t1 = projection + half_chord;
+
+        // Check distance along ray
+        if (t0 < 0) t0 = t1;
+        if (t0 < 0) return false;
+
+        return true;
+    }
+};
+
 void render() {
     const int width = 1024;
     const int height = 768;
