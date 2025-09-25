@@ -45,7 +45,7 @@ struct Light {
 const Material ivory(Vec3f(0.4, 0.4, 0.3));
 const Material plastic = Vec3f(0.3, 0.1, 0.1);
 
-const Vec3f Background_Color = Vec3f(0.0, 0.0, 0.0);
+const Vec3f Background_Color = Vec3f(0.5, 0.5, 0.5);
 const int FOV = 1.05; // 60 Deg FOV
 
 bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const vector<Sphere> &spheres, Vec3f &hit, Vec3f &N, Material &material) {
