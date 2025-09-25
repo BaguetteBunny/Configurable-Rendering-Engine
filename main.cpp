@@ -3,6 +3,17 @@
 #include <iostream>
 using namespace std;
 
+const Vec3f Background_Color = Vec3f(0.0, 0.0, 0.0);
+const Vec3f Object_Color = Vec3f(0.4, 0.4, 0.3);
+
+Vec3f cast_ray(const Vec3f &origin, const Vec3f &direction, const Sphere &sphere) {
+    float sphere_dist = numeric_limits<float>::max();
+
+    if (!sphere.ray_intersect(origin, direction, sphere_dist)) return Background_Color;
+
+    return Object_Color;
+}
+
 struct Sphere {
     Vec3f center;
     float radius;
