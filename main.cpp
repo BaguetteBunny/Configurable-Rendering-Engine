@@ -3,14 +3,23 @@
 #include <iostream>
 using namespace std;
 
+struct Material {
+    Material(const Vec3f &color) : diffuse_color(color) {}
+    Material() : diffuse_color() {}
+    Vec3f diffuse_color;
+};
+
+const Material ivory(Vec3f(0.4, 0.4, 0.3));
+const Material plastic = Vec3f(0.3, 0.1, 0.1);
+
 const Vec3f Background_Color = Vec3f(0.0, 0.0, 0.0);
-const Vec3f Object_Color = Vec3f(0.4, 0.4, 0.3);
 const int FOV = 1.05; // 60 Deg FOV
 
 struct Sphere {
     Vec3f center;
     float radius;
-    Sphere(const Vec3f &c, const float &r) : center(c), radius(r) {}
+    Material material;
+    Sphere(const Vec3f &c, const float &r, const Material &m) : center(c), radius(r), material(m) {}
 
     bool ray_intersect(const Vec3f &origin, const Vec3f &direction, float &t0) const {
         Vec3f L = center - origin;
@@ -33,13 +42,30 @@ struct Sphere {
     }
 };
 
-Vec3f cast_ray(const Vec3f &origin, const Vec3f &direction, const Sphere &sphere) {
-    float sphere_dist = numeric_limits<float>::max();
-    if (!sphere.ray_intersect(origin, direction, sphere_dist)) return Background_Color;
-    return Object_Color;
+bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const vector<Sphere> &spheres, Vec3f &hit, Vec3f &N, Material &material) {
+    float dist_i;
+    float spheres_dist = numeric_limits<float>::max();
+
+    for (size_t i=0; i < spheres.size(); i++) {
+        if (spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
+            spheres_dist = dist_i;
+            hit = orig + dir*dist_i;
+            N = (hit - spheres[i].center).normalize();
+            material = spheres[i].material;
+        }
+    }
+    return spheres_dist<1000;
 }
 
-void render(const Sphere &sphere) {
+Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const vector<Sphere> &spheres) {
+    Vec3f point, N;
+    Material material;
+
+    if (!scene_intersect(orig, dir, spheres, point, N, material)) return Background_Color;
+    return material.diffuse_color;
+}
+
+void render(const std::vector<Sphere> &spheres) {
     const int width = 1024;
     const int height = 768;
     
@@ -53,7 +79,7 @@ void render(const Sphere &sphere) {
             float y = -(2*(j + 0.5)/(float)height - 1) * tan(FOV/2.);
             Vec3f dir = Vec3f(x, y, -1).normalize();
 
-            framebuffer[i + j*width] = cast_ray(Vec3f(0,0,0), dir, sphere);
+            framebuffer[i + j*width] = cast_ray(Vec3f(0,0,0), dir, spheres);
         }
     }
 
@@ -72,11 +98,15 @@ void render(const Sphere &sphere) {
     }
 
     ofs.close();
-
 }
 
 int main() {
-    Sphere sphere(Vec3f(-3,0,-16), 2.0f);
-    render(sphere);
+    vector<Sphere> spheres;
+    spheres.push_back(Sphere(Vec3f(-3,0,-16), 2.0f, plastic));
+    spheres.push_back(Sphere(Vec3f(-1.0, -1.5, -12), 2.0f, ivory));
+    spheres.push_back(Sphere(Vec3f(1.5, -0.5, -18), 2.0f, ivory));
+    spheres.push_back(Sphere(Vec3f(7.0, 5.0, -18.0), 2.0f, plastic));
+
+    render(spheres);
     return 0;
 }
