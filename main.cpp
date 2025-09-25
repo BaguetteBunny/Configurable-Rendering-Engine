@@ -5,19 +5,11 @@ using namespace std;
 
 const Vec3f Background_Color = Vec3f(0.0, 0.0, 0.0);
 const Vec3f Object_Color = Vec3f(0.4, 0.4, 0.3);
-
-Vec3f cast_ray(const Vec3f &origin, const Vec3f &direction, const Sphere &sphere) {
-    float sphere_dist = numeric_limits<float>::max();
-
-    if (!sphere.ray_intersect(origin, direction, sphere_dist)) return Background_Color;
-
-    return Object_Color;
-}
+const int FOV = 1.05; // 60 Deg FOV
 
 struct Sphere {
     Vec3f center;
     float radius;
-
     Sphere(const Vec3f &c, const float &r) : center(c), radius(r) {}
 
     bool ray_intersect(const Vec3f &origin, const Vec3f &direction, float &t0) const {
@@ -41,7 +33,13 @@ struct Sphere {
     }
 };
 
-void render() {
+Vec3f cast_ray(const Vec3f &origin, const Vec3f &direction, const Sphere &sphere) {
+    float sphere_dist = numeric_limits<float>::max();
+    if (!sphere.ray_intersect(origin, direction, sphere_dist)) return Background_Color;
+    return Object_Color;
+}
+
+void render(const Sphere &sphere) {
     const int width = 1024;
     const int height = 768;
     
@@ -50,7 +48,12 @@ void render() {
 
     for (size_t j = 0; j < height; j++) {
         for (size_t i = 0; i < width; i++) {
-            framebuffer[i + j*width] = Vec3f(j/float(height), i/float(width), 0);
+            // Calculate field of view
+            float x =  (2*(i + 0.5)/(float)width - 1) * tan(FOV/2.)*width/(float)height;
+            float y = -(2*(j + 0.5)/(float)height - 1) * tan(FOV/2.);
+            Vec3f dir = Vec3f(x, y, -1).normalize();
+
+            framebuffer[i + j*width] = cast_ray(Vec3f(0,0,0), dir, sphere);
         }
     }
 
@@ -73,6 +76,7 @@ void render() {
 }
 
 int main() {
-    render();
+    Sphere sphere(Vec3f(-3,0,-16), 2.0f);
+    render(sphere);
     return 0;
 }
