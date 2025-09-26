@@ -1,6 +1,8 @@
 #include "libraries/geometry.h"
 #include <fstream>
 #include <iostream>
+#define STB_IMAGE_IMPLEMENTATION
+#include "libraries/stb_image.h"
 using namespace std;
 
 struct Material {
@@ -74,7 +76,6 @@ Vec3f refract(const Vec3f &I, const Vec3f &N, const float &refractive_index) {
     float k = 1 - eta*eta*(1 - cosi*cosi);
     return k < 0 ? Vec3f(0,0,0) : I*eta + n*(eta * cosi - sqrtf(k));
 }
-
 
 bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const vector<Sphere> &spheres, Vec3f &hit, Vec3f &N, Material &material) {
     float dist_i;
@@ -169,6 +170,8 @@ void render(const std::vector<Sphere> &spheres, const vector<Light> &lights) {
 }
 
 int main() {
+    int bg_width, bg_height, bg_channels;
+    unsigned char* bg_data = stbi_load("background.jpg", &bg_width, &bg_height, &bg_channels, 3);
     vector<Sphere> spheres;
     spheres.push_back(Sphere(Vec3f(-3,0,-16), 2.0f, plastic));
     spheres.push_back(Sphere(Vec3f(-1.0, -1.5, -12), 2.0f, glass));
