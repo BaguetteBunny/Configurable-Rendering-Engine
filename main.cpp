@@ -1,9 +1,14 @@
+#define STB_IMAGE_IMPLEMENTATION
 #include <fstream>
 #include <iostream>
 #include <map>
-#define STB_IMAGE_IMPLEMENTATION
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 #include "stb_image.h"
 #include "geometry.h"
+#include "imgui.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_opengl3.h"
 using namespace std;
 
 int bg_width, bg_height, bg_channels;
