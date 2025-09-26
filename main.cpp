@@ -54,6 +54,10 @@ const Material glass(1.5, Vec4f(0.0, 0.5, 0.1, 0.8), Vec3f(0.6, 0.7, 0.8), 125.0
 
 const Vec3f Background_Color = Vec3f(0.5, 0.5, 0.5);
 const float FOV = 1.05; // 60 Deg FOV
+const float PI = 3.14159265359;
+
+int bg_width, bg_height, bg_channels;
+unsigned char* bg_data = stbi_load("assets/dr_sybren.jpg", &bg_width, &bg_height, &bg_channels, 3);
 
 // Direction vector --- See Phong's algorithm
 Vec3f reflect(const Vec3f &I, const Vec3f &N) {
@@ -99,8 +103,21 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &s
     Vec3f point, N;
     Material material;
 
-    // Reflection
-    if (depth > 4 || !scene_intersect(orig, dir, spheres, point, N, material)) return Background_Color;
+    // Compute background texture & pixel coords
+    if (depth > 4 || !scene_intersect(orig, dir, spheres, point, N, material)) {
+        float u = 0.5f + atan2f(dir.z, dir.x) / (2 * PI);
+        float v = 0.5f - asinf(dir.y) / PI;
+
+        int px = min(bg_width - 1, max(0, int(u * bg_width)));
+        int py = min(bg_height - 1, max(0, int(v * bg_height)));
+
+        int index = (py * bg_width + px) * 3;
+        float r = bg_data[index] / 255.0f;
+        float g = bg_data[index + 1] / 255.0f;
+        float b = bg_data[index + 2] / 255.0f;
+        return Vec3f(r, g, b);
+    };
+
     Vec3f reflect_dir = reflect(dir, N).normalize();
     Vec3f refract_dir = refract(dir, N, material.refractive_index).normalize();
 
@@ -170,8 +187,6 @@ void render(const std::vector<Sphere> &spheres, const vector<Light> &lights) {
 }
 
 int main() {
-    int bg_width, bg_height, bg_channels;
-    unsigned char* bg_data = stbi_load("background.jpg", &bg_width, &bg_height, &bg_channels, 3);
     vector<Sphere> spheres;
     spheres.push_back(Sphere(Vec3f(-3,0,-16), 2.0f, plastic));
     spheres.push_back(Sphere(Vec3f(-1.0, -1.5, -12), 2.0f, glass));
@@ -184,5 +199,6 @@ int main() {
     lights.push_back(Light(Vec3f(30, 20, 30), 1.7));
 
     render(spheres, lights);
+    stbi_image_free(bg_data);
     return 0;
 }
