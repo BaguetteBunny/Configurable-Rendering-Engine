@@ -2,13 +2,13 @@
 #include <fstream>
 #include <iostream>
 #include <map>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include "stb_image.h"
-#include "geometry.h"
-#include "imgui.h"
-#include "imgui_impl_sdl.h"
-#include "imgui_impl_opengl3.h"
+#include "include/imgui.h"
+#include "include/geometry.h"
+#include "include/stb_image.h"
+#include "include/SDL2/SDL.h"
+#include "include/SDL2/SDL_opengl.h"
+#include "include/backends/imgui_impl_sdl.h"
+#include "include/backends/imgui_impl_opengl3.h"
 using namespace std;
 
 int bg_width, bg_height, bg_channels;
@@ -218,5 +218,58 @@ int main() {
     scene.bg_data = stbi_load("assets/dr_sybren.jpg", &bg_width, &bg_height, &bg_channels, 3);
 
     render(scene);
+    return 0;
+}
+
+int main(int, char**) {
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+    SDL_Window* window = SDL_CreateWindow("Simple Menu", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_MakeCurrent(window, gl_context);
+    SDL_GL_SetSwapInterval(1);
+
+    // DearImGUI Setup
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
+    bool running = true;
+    while (running) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            if (event.type == SDL_QUIT) running = false;
+        }
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+
+        // UI
+        ImGui::Begin("Test");
+        ImGui::Text("Hello World!");
+        ImGui::End();
+
+        // Render
+        ImGui::Render();
+        glViewport(0, 0, 1280, 720);
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        SDL_GL_SwapWindow(window);
+    }
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+    SDL_GL_DeleteContext(gl_context);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
     return 0;
 }
