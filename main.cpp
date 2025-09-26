@@ -211,7 +211,7 @@ int main() {
     lights.push_back(Light(Vec3f(30, 20, 30), 1.7));
 
     Scene scene(spheres, lights, materials, 1.05); // 60 Deg FOV (Default)
-    scene.bg_data = stbi_load("assets/dr_sybren.jpg", &bg_width, &bg_height, &bg_channels, 3);
+    scene.bg_data = stbi_load("assets/church_of_lutherstadt.jpg", &bg_width, &bg_height, &bg_channels, 3);
 
     render(scene);
     return 0;
