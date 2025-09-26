@@ -1,9 +1,9 @@
-#include "libraries/geometry.h"
 #include <fstream>
 #include <iostream>
 #include <map>
 #define STB_IMAGE_IMPLEMENTATION
-#include "libraries/stb_image.h"
+#include "stb_image.h"
+#include "geometry.h"
 using namespace std;
 
 int bg_width, bg_height, bg_channels;
@@ -193,8 +193,8 @@ void render(const Scene &scene) {
 
 int main() {
     map<string, Material> materials;
-    materials["ivory"] = Material(1.0, Vec4f(0.6,  0.3, 0.1, 0.0), Vec3f(0.4, 0.4, 0.3), 50.0);
-    materials["plastic"] = Material(1.0, Vec4f(0.9,  0.1, 0.0, 0.0), Vec3f(0.3, 0.1, 0.1), 10.0);
+    materials["ivory"] = Material(1.0, Vec4f(0.6, 0.3, 0.1, 0.0), Vec3f(0.4, 0.4, 0.3), 50.0);
+    materials["plastic"] = Material(1.0, Vec4f(0.9, 0.1, 0.0, 0.0), Vec3f(0.3, 0.1, 0.1), 10.0);
     materials["mirror"] = Material(1.0, Vec4f(0.0, 10.0, 0.8, 0.0), Vec3f(1.0, 1.0, 1.0), 1425.0);
     materials["glass"] = Material(1.5, Vec4f(0.0, 0.5, 0.1, 0.8), Vec3f(0.6, 0.7, 0.8), 125.0);
 
