@@ -45,13 +45,13 @@ struct Light {
     float intensity;
 };
 
-Material ivory(1.0, Vec4f(0.6,  0.3, 0.1, 0.0), Vec3f(0.4, 0.4, 0.3), 50.0);
-Material plastic(1.0, Vec4f(0.9,  0.1, 0.0, 0.0), Vec3f(0.3, 0.1, 0.1), 10.0);
-Material mirror(1.0, Vec4f(0.0, 10.0, 0.8, 0.0), Vec3f(1.0, 1.0, 1.0), 1425.0);
-Material glass(1.5, Vec4f(0.0, 0.5, 0.1, 0.8), Vec3f(0.6, 0.7, 0.8), 125.0);
+const Material ivory(1.0, Vec4f(0.6,  0.3, 0.1, 0.0), Vec3f(0.4, 0.4, 0.3), 50.0);
+const Material plastic(1.0, Vec4f(0.9,  0.1, 0.0, 0.0), Vec3f(0.3, 0.1, 0.1), 10.0);
+const Material mirror(1.0, Vec4f(0.0, 10.0, 0.8, 0.0), Vec3f(1.0, 1.0, 1.0), 1425.0);
+const Material glass(1.5, Vec4f(0.0, 0.5, 0.1, 0.8), Vec3f(0.6, 0.7, 0.8), 125.0);
 
 const Vec3f Background_Color = Vec3f(0.5, 0.5, 0.5);
-const int FOV = 1.05; // 60 Deg FOV
+const float FOV = 1.05; // 60 Deg FOV
 
 // Direction vector --- See Phong's algorithm
 Vec3f reflect(const Vec3f &I, const Vec3f &N) {
