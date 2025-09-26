@@ -1,9 +1,13 @@
 #include "libraries/geometry.h"
 #include <fstream>
 #include <iostream>
+#include <map>
 #define STB_IMAGE_IMPLEMENTATION
 #include "libraries/stb_image.h"
 using namespace std;
+
+int bg_width, bg_height, bg_channels;
+const float PI = 3.14159265358979323846;
 
 struct Material {
     Material(const float &r, const Vec4f &a, const Vec3f &color, const float &spec) : refractive_index(r), albedo(a), diffuse_color(color), specular_exponent(spec) {}
@@ -48,23 +52,17 @@ struct Light {
 };
 
 struct Scene {
-    Scene(const vector<Sphere> &s, const vector<Light> &l) : spheres(s), lights(l) {}
+    Scene(const vector<Sphere> &s, const vector<Light> &l, const map<string, Material> &m, const float &f):
+    spheres(s), lights(l), materials(m), FOV(f) {}
+
     vector<Sphere> spheres;
     vector<Light> lights;
+    map<string, Material> materials;
+    float FOV;
     unsigned char* bg_data = nullptr;
 
     ~Scene() {if (bg_data) stbi_image_free(bg_data);}
 };
-
-const Material ivory(1.0, Vec4f(0.6,  0.3, 0.1, 0.0), Vec3f(0.4, 0.4, 0.3), 50.0);
-const Material plastic(1.0, Vec4f(0.9,  0.1, 0.0, 0.0), Vec3f(0.3, 0.1, 0.1), 10.0);
-const Material mirror(1.0, Vec4f(0.0, 10.0, 0.8, 0.0), Vec3f(1.0, 1.0, 1.0), 1425.0);
-const Material glass(1.5, Vec4f(0.0, 0.5, 0.1, 0.8), Vec3f(0.6, 0.7, 0.8), 125.0);
-
-const Vec3f Background_Color = Vec3f(0.5, 0.5, 0.5);
-const float FOV = 1.05; // 60 Deg FOV
-const float PI = 3.14159265359;
-int bg_width, bg_height, bg_channels;
 
 // Direction vector --- See Phong's algorithm
 Vec3f reflect(const Vec3f &I, const Vec3f &N) {
@@ -165,8 +163,8 @@ void render(const Scene &scene) {
     for (size_t j = 0; j < height; j++) {
         for (size_t i = 0; i < width; i++) {
             // Calculate field of view
-            float x =  (2*(i + 0.5)/(float)width - 1) * tan(FOV/2.)*width/(float)height;
-            float y = -(2*(j + 0.5)/(float)height - 1) * tan(FOV/2.);
+            float x =  (2*(i + 0.5)/(float)width - 1) * tan(scene.FOV/2.)*width/(float)height;
+            float y = -(2*(j + 0.5)/(float)height - 1) * tan(scene.FOV/2.);
             Vec3f dir = Vec3f(x, y, -1).normalize();
 
             framebuffer[i + j*width] = cast_ray(Vec3f(0,0,0), dir, scene);
@@ -194,18 +192,24 @@ void render(const Scene &scene) {
 }
 
 int main() {
+    map<string, Material> materials;
+    materials["ivory"] = Material(1.0, Vec4f(0.6,  0.3, 0.1, 0.0), Vec3f(0.4, 0.4, 0.3), 50.0);
+    materials["plastic"] = Material(1.0, Vec4f(0.9,  0.1, 0.0, 0.0), Vec3f(0.3, 0.1, 0.1), 10.0);
+    materials["mirror"] = Material(1.0, Vec4f(0.0, 10.0, 0.8, 0.0), Vec3f(1.0, 1.0, 1.0), 1425.0);
+    materials["glass"] = Material(1.5, Vec4f(0.0, 0.5, 0.1, 0.8), Vec3f(0.6, 0.7, 0.8), 125.0);
+
     vector<Sphere> spheres;
-    spheres.push_back(Sphere(Vec3f(-3,0,-16), 2.0f, plastic));
-    spheres.push_back(Sphere(Vec3f(-1.0, -1.5, -12), 2.0f, glass));
-    spheres.push_back(Sphere(Vec3f(1.5, -0.5, -18), 2.0f, ivory));
-    spheres.push_back(Sphere(Vec3f(7.0, 5.0, -18.0), 4.0f, mirror));
+    spheres.push_back(Sphere(Vec3f(-3,0,-16), 2.0f, materials["plastic"]));
+    spheres.push_back(Sphere(Vec3f(-1.0, -1.5, -12), 2.0f, materials["glass"]));
+    spheres.push_back(Sphere(Vec3f(1.5, -0.5, -18), 2.0f, materials["ivory"]));
+    spheres.push_back(Sphere(Vec3f(7.0, 5.0, -18.0), 4.0f, materials["mirror"]));
 
     vector<Light> lights;
     lights.push_back(Light(Vec3f(-20, 20, 20), 1.5));
     lights.push_back(Light(Vec3f(30, 50, -25), 1.8));
     lights.push_back(Light(Vec3f(30, 20, 30), 1.7));
 
-    Scene scene(spheres, lights);
+    Scene scene(spheres, lights, materials, 1.05); // 60 Deg FOV (Default)
     scene.bg_data = stbi_load("assets/dr_sybren.jpg", &bg_width, &bg_height, &bg_channels, 3);
 
     render(scene);
