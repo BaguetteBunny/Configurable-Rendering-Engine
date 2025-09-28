@@ -15,8 +15,8 @@ using namespace std;
 
 int bg_width, bg_height, bg_channels;
 const float PI = 3.14159265358979323846;
-const int frame_width = 1280;
-const int frame_height = 720;
+const int frame_width = 1920;
+const int frame_height = 1080;
 
 struct Material {
     Material(const float &r, const Vec4f &a, const Vec3f &color, const float &spec) : refractive_index(r), albedo(a), diffuse_color(color), specular_exponent(spec) {}
@@ -162,7 +162,7 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t d
     return material.diffuse_color * diffuse_light_intensity * material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1] + reflect_color*material.albedo[2] + refract_color*material.albedo[3];
 }
 
-vector<Vec3f> render(const Scene &scene) {
+vector<unsigned char> render(const Scene &scene) {
     const int width = frame_width;
     const int height = frame_height;
     
@@ -180,26 +180,19 @@ vector<Vec3f> render(const Scene &scene) {
         }
     }
 
-    return framebuffer;
+    // Turn floats to bytearrays
+    vector<unsigned char> texData(frame_width * frame_height * 3);
+        for (size_t i = 0; i < frame_width * frame_height; ++i) {
+            Vec3f &c = framebuffer[i];
+            float maxVal = max(c[0], max(c[1], c[2]));
+            if (maxVal > 1.f) c = c * (1.f / maxVal);
 
-    // Save buffer frame
-    ofstream ofs;
-    ofs.open("./output/out.ppm", ofstream::out | ofstream::binary);
-    ofs << "P6\n" << width << " " << height << "\n255\n";
-
-    for (size_t i = 0; i < height*width; ++i) {
-        Vec3f &c = framebuffer[i];
-        float maximum = max(c[0], max(c[1], c[2]));
-        if (maximum > 1) c = c*(1./maximum);
-
-        for (size_t j = 0; j < 3; j++) {
-            float clamped_color = max(0.f, min(1.f, c[j]));
-            unsigned char final_rgb_color = 255 * clamped_color;
-
-            ofs << final_rgb_color;
+            for (int j = 0; j < 3; ++j) {
+                texData[i*3 + j] = static_cast<unsigned char>(clamp(c[j], 0.f, 1.f) * 255.f);
+            }
         }
-    }
-    ofs.close();
+
+    return texData;
 }
 
 int main() {
@@ -245,24 +238,14 @@ int main() {
     scene.bg_data = stbi_load("assets/church_of_lutherstadt.jpg", &bg_width, &bg_height, &bg_channels, 3);
 
     // Framebuffer
-    vector<Vec3f> framebuffer;
+    vector<unsigned char> framebuffer;
     framebuffer = render(scene);
-    vector<unsigned char> texData(frame_width * frame_height * 3);
-    for (size_t i = 0; i < frame_width * frame_height; ++i) {
-        Vec3f &c = framebuffer[i];
-        float maxVal = max(c[0], max(c[1], c[2]));
-        if (maxVal > 1.f) c = c * (1.f / maxVal); // optional HDR clamp
-
-        for (int j = 0; j < 3; ++j) {
-            texData[i*3 + j] = static_cast<unsigned char>(clamp(c[j], 0.f, 1.f) * 255.f);
-        }
-    }
 
     // Dynamic Rendering
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, frame_width, frame_height, 0, GL_RGB, GL_UNSIGNED_BYTE, texData.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, frame_width, frame_height, 0, GL_RGB, GL_UNSIGNED_BYTE, framebuffer.data());
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -281,9 +264,9 @@ int main() {
                 }
             }
         }
-
+        
         glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, frame_width, frame_height, GL_RGB, GL_UNSIGNED_BYTE, texData.data());
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, frame_width, frame_height, GL_RGB, GL_UNSIGNED_BYTE, framebuffer.data());
 
         // Start a new ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
@@ -292,7 +275,7 @@ int main() {
 
         ImGui::Begin("Hello");
         ImGui::GetBackgroundDrawList()->AddImage(textureID, ImVec2(0, 0), ImGui::GetIO().DisplaySize);
-        ImGui::Text("Testing 123");
+        ImGui::SliderFloat("Sphere Radius", &spheres[3].radius, 0.1f, 10.0f);
         ImGui::End();
 
         ImGui::Render();
