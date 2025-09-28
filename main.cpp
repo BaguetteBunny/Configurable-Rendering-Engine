@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <algorithm>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_opengl.h>
 #include <geometry.h>
@@ -14,6 +15,8 @@ using namespace std;
 
 int bg_width, bg_height, bg_channels;
 const float PI = 3.14159265358979323846;
+const int frame_width = 1280;
+const int frame_height = 720;
 
 struct Material {
     Material(const float &r, const Vec4f &a, const Vec3f &color, const float &spec) : refractive_index(r), albedo(a), diffuse_color(color), specular_exponent(spec) {}
@@ -159,9 +162,9 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t d
     return material.diffuse_color * diffuse_light_intensity * material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1] + reflect_color*material.albedo[2] + refract_color*material.albedo[3];
 }
 
-void render(const Scene &scene) {
-    const int width = 1024;
-    const int height = 768;
+vector<Vec3f> render(const Scene &scene) {
+    const int width = frame_width;
+    const int height = frame_height;
     
     // Initialize buffer frame
     vector<Vec3f> framebuffer(width * height);
@@ -176,6 +179,8 @@ void render(const Scene &scene) {
             framebuffer[i + j*width] = cast_ray(Vec3f(0,0,0), dir, scene);
         }
     }
+
+    return framebuffer;
 
     // Save buffer frame
     ofstream ofs;
@@ -197,38 +202,28 @@ void render(const Scene &scene) {
     ofs.close();
 }
 
-void init_sdl() {
+int main() {
+    // Initialize
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-    // VSync
     SDL_GL_SetSwapInterval(1);
-}
-
-int main() {
-    init_sdl();
-
-    SDL_Window* window = SDL_CreateWindow("GUI", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    SDL_Window* window = SDL_CreateWindow("GUI", frame_width, frame_height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     ImGui::StyleColorsDark();
-
     ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init("#version 330");
-
     
+    // Materials Shapes Lights Backgrounds
     map<string, Material> materials;
     materials["ivory"] = Material(1.0, Vec4f(0.6, 0.3, 0.1, 0.0), Vec3f(0.4, 0.4, 0.3), 50.0);
     materials["plastic"] = Material(1.0, Vec4f(0.9, 0.1, 0.0, 0.0), Vec3f(0.3, 0.1, 0.1), 10.0);
@@ -249,7 +244,28 @@ int main() {
     Scene scene(spheres, lights, materials, 1.05); // 60 Deg FOV (Default)
     scene.bg_data = stbi_load("assets/church_of_lutherstadt.jpg", &bg_width, &bg_height, &bg_channels, 3);
 
-    render(scene);
+    // Framebuffer
+    vector<Vec3f> framebuffer;
+    framebuffer = render(scene);
+    vector<unsigned char> texData(frame_width * frame_height * 3);
+    for (size_t i = 0; i < frame_width * frame_height; ++i) {
+        Vec3f &c = framebuffer[i];
+        float maxVal = max(c[0], max(c[1], c[2]));
+        if (maxVal > 1.f) c = c * (1.f / maxVal); // optional HDR clamp
+
+        for (int j = 0; j < 3; ++j) {
+            texData[i*3 + j] = static_cast<unsigned char>(clamp(c[j], 0.f, 1.f) * 255.f);
+        }
+    }
+
+    // Dynamic Rendering
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, frame_width, frame_height, 0, GL_RGB, GL_UNSIGNED_BYTE, texData.data());
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     bool done = false;
     while (!done) {
@@ -266,12 +282,16 @@ int main() {
             }
         }
 
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, frame_width, frame_height, GL_RGB, GL_UNSIGNED_BYTE, texData.data());
+
         // Start a new ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
         ImGui::Begin("Hello");
+        ImGui::Image((void*)(intptr_t)textureID, ImVec2(frame_width, frame_height));
         ImGui::Text("Testing 123");
         ImGui::End();
 
