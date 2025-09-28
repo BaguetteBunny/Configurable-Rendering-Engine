@@ -291,7 +291,7 @@ int main() {
         ImGui::NewFrame();
 
         ImGui::Begin("Hello");
-        ImGui::Image((void*)(intptr_t)textureID, ImVec2(frame_width, frame_height));
+        ImGui::GetBackgroundDrawList()->AddImage(textureID, ImVec2(0, 0), ImGui::GetIO().DisplaySize);
         ImGui::Text("Testing 123");
         ImGui::End();
 
