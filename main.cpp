@@ -165,34 +165,31 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t d
 vector<unsigned char> render(const Scene &scene) {
     const int width = frame_width;
     const int height = frame_height;
+    const float scale = tan(scene.FOV/2.0f);
+    const float scale_aspect_prod = scale * frame_width / float(frame_height);
     
     // Initialize buffer frame
-    vector<Vec3f> framebuffer(width * height);
+    vector<unsigned char> framebuffer(width * height);
 
     for (size_t j = 0; j < height; j++) {
         for (size_t i = 0; i < width; i++) {
             // Calculate field of view
-            float x =  (2*(i + 0.5)/(float)width - 1) * tan(scene.FOV/2.)*width/(float)height;
-            float y = -(2*(j + 0.5)/(float)height - 1) * tan(scene.FOV/2.);
+            float x =  (2*(i + 0.5)/(float)width - 1) * scale_aspect_prod;
+            float y = -(2*(j + 0.5)/(float)height - 1) * scale;
             Vec3f dir = Vec3f(x, y, -1).normalize();
+            Vec3f c = cast_ray(Vec3f(0,0,0), dir, scene);
 
-            framebuffer[i + j*width] = cast_ray(Vec3f(0,0,0), dir, scene);
-        }
-    }
-
-    // Turn floats to bytearrays
-    vector<unsigned char> texData(frame_width * frame_height * 3);
-        for (size_t i = 0; i < frame_width * frame_height; ++i) {
-            Vec3f &c = framebuffer[i];
             float maxVal = max(c[0], max(c[1], c[2]));
             if (maxVal > 1.f) c = c * (1.f / maxVal);
 
-            for (int j = 0; j < 3; ++j) {
-                texData[i*3 + j] = static_cast<unsigned char>(clamp(c[j], 0.f, 1.f) * 255.f);
-            }
+            size_t idx = (i + j*width) * 3;
+            framebuffer[idx+0] = static_cast<unsigned char>(clamp(c[0], 0.f, 1.f) * 255.f);
+            framebuffer[idx+1] = static_cast<unsigned char>(clamp(c[1], 0.f, 1.f) * 255.f);
+            framebuffer[idx+2] = static_cast<unsigned char>(clamp(c[2], 0.f, 1.f) * 255.f);
         }
+    }
 
-    return texData;
+    return framebuffer;
 }
 
 int main() {
