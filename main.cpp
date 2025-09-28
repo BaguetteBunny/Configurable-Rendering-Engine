@@ -99,6 +99,7 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const Scene &scene, Ve
     float dist_i;
     float spheres_dist = numeric_limits<float>::max();
 
+    #pragma omp parallel for schedule(dynamic)
     for (size_t i=0; i < scene.spheres.size(); i++) {
         // Account for overlapping Sphere
         if (scene.spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
@@ -143,6 +144,8 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t d
 
     float diffuse_light_intensity = 0;
     float specular_light_intensity = 0;
+
+    #pragma omp parallel for schedule(dynamic)
     for (size_t i=0; i<scene.lights.size(); i++) {
         Vec3f light_dir = (scene.lights[i].position - point).normalize();
         float light_distance = (scene.lights[i].position - point).norm();
@@ -167,16 +170,18 @@ vector<unsigned char> render(const Scene &scene) {
     const int height = frame_height;
     const float scale = tan(scene.FOV/2.0f);
     const float scale_aspect_prod = scale * frame_width / float(frame_height);
+    vector<unsigned char> framebuffer(width * height * 3);
     
-    // Initialize buffer frame
-    vector<unsigned char> framebuffer(width * height);
-
+    // Multi-threaded rendering
+    #pragma omp parallel for schedule(dynamic)
     for (size_t j = 0; j < height; j++) {
         for (size_t i = 0; i < width; i++) {
             // Calculate field of view
             float x =  (2*(i + 0.5)/(float)width - 1) * scale_aspect_prod;
             float y = -(2*(j + 0.5)/(float)height - 1) * scale;
             Vec3f dir = Vec3f(x, y, -1).normalize();
+
+            // Create bytearray
             Vec3f c = cast_ray(Vec3f(0,0,0), dir, scene);
 
             float maxVal = max(c[0], max(c[1], c[2]));
@@ -261,7 +266,7 @@ int main() {
                 }
             }
         }
-        
+        framebuffer = render(scene);
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, frame_width, frame_height, GL_RGB, GL_UNSIGNED_BYTE, framebuffer.data());
 
@@ -272,7 +277,7 @@ int main() {
 
         ImGui::Begin("Hello");
         ImGui::GetBackgroundDrawList()->AddImage(textureID, ImVec2(0, 0), ImGui::GetIO().DisplaySize);
-        ImGui::SliderFloat("Sphere Radius", &spheres[3].radius, 0.1f, 10.0f);
+        ImGui::SliderFloat("Sphere Radius", &scene.spheres[3].radius, 0.1f, 10.0f);
         ImGui::End();
 
         ImGui::Render();
