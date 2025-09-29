@@ -145,8 +145,9 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t d
     float specular_light_intensity = 0;
 
     for (size_t i=0; i<scene.lights.size(); i++) {
-        Vec3f light_dir = (scene.lights[i].position - point).normalize();
-        float light_distance = (scene.lights[i].position - point).norm();
+        Vec3f to_light = scene.lights[i].position - point;
+        float light_distance = to_light.norm();
+        Vec3f light_dir = to_light * (1 / light_distance);
         
         // Check if point in shadow of lights[i]
         Vec3f shadow_orig = light_dir*N < 0 ? point - N*1e-3 : point + N*1e-3;
