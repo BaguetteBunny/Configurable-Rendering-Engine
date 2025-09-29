@@ -99,7 +99,6 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const Scene &scene, Ve
     float dist_i;
     float spheres_dist = numeric_limits<float>::max();
 
-    #pragma omp parallel for schedule(dynamic)
     for (size_t i=0; i < scene.spheres.size(); i++) {
         // Account for overlapping Sphere
         if (scene.spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
@@ -145,7 +144,6 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t d
     float diffuse_light_intensity = 0;
     float specular_light_intensity = 0;
 
-    #pragma omp parallel for schedule(dynamic)
     for (size_t i=0; i<scene.lights.size(); i++) {
         Vec3f light_dir = (scene.lights[i].position - point).normalize();
         float light_distance = (scene.lights[i].position - point).norm();
