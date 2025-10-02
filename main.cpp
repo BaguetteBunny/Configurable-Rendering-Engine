@@ -116,19 +116,21 @@ bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const Scene &scene, Ve
 Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t depth=0) {
     Vec3f point, N;
     Material material;
+    const float inv_pi = 1/PI;
+    const float inv_maxcol = 1/255.0f;
 
     // Compute background texture & pixel coords
     if (depth > 4 || !scene_intersect(orig, dir, scene, point, N, material)) {
-        float u = 0.5f + atan2f(dir.z, dir.x) / (2 * PI);
-        float v = 0.5f - asinf(dir.y) / PI;
+        float u = 0.5f + atan2f(dir.z, dir.x) * inv_pi * 0.5f;
+        float v = 0.5f - asinf(dir.y) * inv_pi;
 
         int px = min(bg_width - 1, max(0, int(u * bg_width)));
         int py = min(bg_height - 1, max(0, int(v * bg_height)));
 
         int index = (py * bg_width + px) * 3;
-        float r = scene.bg_data[index] / 255.0f;
-        float g = scene.bg_data[index + 1] / 255.0f;
-        float b = scene.bg_data[index + 2] / 255.0f;
+        float r = scene.bg_data[index] * inv_maxcol;
+        float g = scene.bg_data[index + 1] * inv_maxcol;
+        float b = scene.bg_data[index + 2] * inv_maxcol;
         return Vec3f(r, g, b);
     };
 
@@ -170,14 +172,17 @@ vector<unsigned char> render(const Scene &scene) {
     const float scale = tan(scene.FOV/2.0f);
     const float scale_aspect_prod = scale * frame_width / float(frame_height);
     vector<unsigned char> framebuffer(width * height * 3);
+
+    const float inv_w = (1.0/width);
+    const float inv_h = (1.0/height);
     
     // Multi-threaded rendering
-    #pragma omp parallel for schedule(dynamic)
+    #pragma omp parallel for
     for (size_t j = 0; j < height; j++) {
         for (size_t i = 0; i < width; i++) {
             // Calculate field of view
-            float x =  (2*(i + 0.5)/(float)width - 1) * scale_aspect_prod;
-            float y = -(2*(j + 0.5)/(float)height - 1) * scale;
+            float x =  (2*(i + 0.5) * inv_w - 1) * scale_aspect_prod;
+            float y = -(2*(j + 0.5) * inv_h - 1) * scale;
             Vec3f dir = Vec3f(x, y, -1).normalize();
 
             // Create bytearray
