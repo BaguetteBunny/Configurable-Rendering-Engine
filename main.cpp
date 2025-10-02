@@ -290,6 +290,9 @@ int main() {
     ImGui::StyleColorsDark();
     ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init("#version 330");
+
+    // Fonts
+    io.Fonts->AddFontFromFileTTF("assets/fonts/monogram.ttf", 18.0f);
     
     // Materials Shapes Lights Backgrounds
     map<string, Material> materials;
@@ -353,17 +356,18 @@ int main() {
         ImGui::Begin("Config Menu");
         ImGui::GetBackgroundDrawList()->AddImage(textureID, ImVec2(0, 0), ImGui::GetIO().DisplaySize);
 
+        ImGui::BeginChild("Sphere Panel", ImVec2(500, 500), true);
         for (int i = 0; i < scene.spheres.size(); i++) {
             Sphere& s = scene.spheres[i];
             if (ImGui::CollapsingHeader(("Sphere " + to_string(i+1)).c_str())) {
                 // Radius
-                updated |= ImGui::SliderFloat(("Radius##" + std::to_string(i)).c_str(), &s.radius, 0.1f, 10.0f);
+                updated |= ImGui::SliderFloat(("Radius##" + to_string(i)).c_str(), &s.radius, 0.1f, 10.0f);
                 
                 // Position
-                if (ImGui::TreeNode(("Position##" + std::to_string(i)).c_str())) {
-                    updated |= ImGui::SliderFloat(("X##" + std::to_string(i)).c_str(), &s.center.x, -100.0f, 100.0f);
-                    updated |= ImGui::SliderFloat(("Y##" + std::to_string(i)).c_str(), &s.center.y, -100.0f, 100.0f);
-                    updated |= ImGui::SliderFloat(("Z##" + std::to_string(i)).c_str(), &s.center.z, -100.0f, 100.0f);
+                if (ImGui::TreeNode(("Position##" + to_string(i)).c_str())) {
+                    updated |= ImGui::SliderFloat(("X##" + to_string(i)).c_str(), &s.center.x, -20.0f, 20.0f);
+                    updated |= ImGui::SliderFloat(("Y##" + to_string(i)).c_str(), &s.center.y, -20.0f, 20.0f);
+                    updated |= ImGui::SliderFloat(("Z##" + to_string(i)).c_str(), &s.center.z, -20.0f, 20.0f);
                     ImGui::TreePop();
                 }
 
@@ -373,15 +377,15 @@ int main() {
                         s.material = materials["glass"];
                         updated = true;
                     }
-                    if (ImGui::Button(("Ivory##" + std::to_string(i)).c_str())) {
+                    if (ImGui::Button(("Ivory##" + to_string(i)).c_str())) {
                         s.material = materials["ivory"];
                         updated = true;
                     }
-                    if (ImGui::Button(("Red Plastic##" + std::to_string(i)).c_str())) {
+                    if (ImGui::Button(("Red Plastic##" + to_string(i)).c_str())) {
                         s.material = materials["plastic"];
                         updated = true;
                     }
-                    if (ImGui::Button(("Mirror##" + std::to_string(i)).c_str())) {
+                    if (ImGui::Button(("Mirror##" + to_string(i)).c_str())) {
                         s.material = materials["mirror"];
                         updated = true;
                     }
@@ -389,6 +393,26 @@ int main() {
                 }
             }
         }
+        ImGui::EndChild();
+
+        ImGui::BeginChild("Lights Panel", ImVec2(500, 500), true);
+        for (int i = 0; i < scene.lights.size(); i++) {
+            Light& s = scene.lights[i];
+            if (ImGui::CollapsingHeader(("Light " + to_string(i+1)).c_str())) {
+                // Intensity
+                updated |= ImGui::SliderFloat(("Intensity##" + to_string(i)).c_str(), &s.intensity, 0.1f, 25.0f);
+                
+                // Position
+                if (ImGui::TreeNode(("Position##" + to_string(i)).c_str())) {
+                    updated |= ImGui::SliderFloat(("X##" + to_string(i)).c_str(), &s.position.x, -20.0f, 20.0f);
+                    updated |= ImGui::SliderFloat(("Y##" + to_string(i)).c_str(), &s.position.y, -20.0f, 20.0f);
+                    updated |= ImGui::SliderFloat(("Z##" + to_string(i)).c_str(), &s.position.z, -20.0f, 20.0f);
+                    ImGui::TreePop();
+                }
+    
+            }
+        }
+        ImGui::EndChild();
 
         if (updated) {
             build_bvh(scene.spheres, scene.scene_bvh, scene.bvh_order);
