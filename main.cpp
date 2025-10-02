@@ -350,9 +350,45 @@ int main() {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Hello");
+        ImGui::Begin("Config Menu");
         ImGui::GetBackgroundDrawList()->AddImage(textureID, ImVec2(0, 0), ImGui::GetIO().DisplaySize);
-        updated |= ImGui::SliderFloat("Sphere Radius", &scene.spheres[3].radius, 0.1f, 10.0f);
+
+        for (int i = 0; i < scene.spheres.size(); i++) {
+            Sphere& s = scene.spheres[i];
+            if (ImGui::CollapsingHeader(("Sphere " + to_string(i+1)).c_str())) {
+                // Radius
+                updated |= ImGui::SliderFloat(("Radius##" + std::to_string(i)).c_str(), &s.radius, 0.1f, 10.0f);
+                
+                // Position
+                if (ImGui::TreeNode(("Position##" + std::to_string(i)).c_str())) {
+                    updated |= ImGui::SliderFloat(("X##" + std::to_string(i)).c_str(), &s.center.x, -100.0f, 100.0f);
+                    updated |= ImGui::SliderFloat(("Y##" + std::to_string(i)).c_str(), &s.center.y, -100.0f, 100.0f);
+                    updated |= ImGui::SliderFloat(("Z##" + std::to_string(i)).c_str(), &s.center.z, -100.0f, 100.0f);
+                    ImGui::TreePop();
+                }
+
+                // Material
+                if (ImGui::TreeNode(("Material##" + to_string(i)).c_str())) {
+                    if (ImGui::Button(("Glass##" + to_string(i)).c_str())) {
+                        s.material = materials["glass"];
+                        updated = true;
+                    }
+                    if (ImGui::Button(("Ivory##" + std::to_string(i)).c_str())) {
+                        s.material = materials["ivory"];
+                        updated = true;
+                    }
+                    if (ImGui::Button(("Red Plastic##" + std::to_string(i)).c_str())) {
+                        s.material = materials["plastic"];
+                        updated = true;
+                    }
+                    if (ImGui::Button(("Mirror##" + std::to_string(i)).c_str())) {
+                        s.material = materials["mirror"];
+                        updated = true;
+                    }
+                    ImGui::TreePop();
+                }
+            }
+        }
 
         if (updated) {
             build_bvh(scene.spheres, scene.scene_bvh, scene.bvh_order);
