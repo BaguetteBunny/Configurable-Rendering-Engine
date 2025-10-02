@@ -9,7 +9,7 @@
 #include "imgui/backends/imgui_impl_opengl3.h"
 #include "imgui/backends/imgui_impl_sdl3.h"
 #include "main_struct.h"
-// g++ -Iinclude -Iimgui -Iimgui/backends -Iinclude/SDL3 main.cpp imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp imgui/backends/imgui_impl_sdl3.cpp imgui/backends/imgui_impl_opengl3.cpp -Llib -lSDL3 -lmingw32 -lopengl32 -lgdi32 -o main.exe
+// g++ -O3 -march=native -mfma -ffast-math -Iinclude -Iimgui -Iimgui/backends -Iinclude/SDL3 main.cpp imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp imgui/backends/imgui_impl_sdl3.cpp imgui/backends/imgui_impl_opengl3.cpp -Llib -lSDL3 -lmingw32 -lopengl32 -lgdi32 -o main.exe
 using namespace std;
 
 int bg_width, bg_height, bg_channels;
@@ -293,6 +293,11 @@ int main() {
 
     // Fonts
     io.Fonts->AddFontFromFileTTF("assets/fonts/monogram.ttf", 18.0f);
+
+    // Styling
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowPadding = ImVec2(5, 5);
+    style.ItemSpacing = ImVec2(8, 4);
     
     // Materials Shapes Lights Backgrounds
     map<string, Material> materials;
@@ -358,7 +363,7 @@ int main() {
 
         ImGui::BeginChild("Sphere Panel", ImVec2(500, 500), true);
         if (ImGui::Button(("Add Sphere##"))) {
-            scene.spheres.push_back(Sphere(Vec3f(0,0,0), 1.0f, materials["plastic"])); 
+            scene.spheres.push_back(Sphere(Vec3f(0,0,-10.f), 1.0f, materials["plastic"])); 
             updated = true;
         }
         for (int i = 0; i < scene.spheres.size(); i++) {
