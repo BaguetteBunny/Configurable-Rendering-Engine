@@ -357,6 +357,10 @@ int main() {
         ImGui::GetBackgroundDrawList()->AddImage(textureID, ImVec2(0, 0), ImGui::GetIO().DisplaySize);
 
         ImGui::BeginChild("Sphere Panel", ImVec2(500, 500), true);
+        if (ImGui::Button(("Add Sphere##"))) {
+            scene.spheres.push_back(Sphere(Vec3f(0,0,0), 1.0f, materials["plastic"])); 
+            updated = true;
+        }
         for (int i = 0; i < scene.spheres.size(); i++) {
             Sphere& s = scene.spheres[i];
             if (ImGui::CollapsingHeader(("Sphere " + to_string(i+1)).c_str())) {
@@ -396,6 +400,10 @@ int main() {
         ImGui::EndChild();
 
         ImGui::BeginChild("Lights Panel", ImVec2(500, 500), true);
+        if (ImGui::Button(("Add Light##"))) {
+            scene.lights.push_back(Light(Vec3f(10, 10, 10), 1));
+            updated = true;
+        }
         for (int i = 0; i < scene.lights.size(); i++) {
             Light& s = scene.lights[i];
             if (ImGui::CollapsingHeader(("Light " + to_string(i+1)).c_str())) {
@@ -404,9 +412,9 @@ int main() {
                 
                 // Position
                 if (ImGui::TreeNode(("Position##" + to_string(i)).c_str())) {
-                    updated |= ImGui::SliderFloat(("X##" + to_string(i)).c_str(), &s.position.x, -20.0f, 20.0f);
-                    updated |= ImGui::SliderFloat(("Y##" + to_string(i)).c_str(), &s.position.y, -20.0f, 20.0f);
-                    updated |= ImGui::SliderFloat(("Z##" + to_string(i)).c_str(), &s.position.z, -20.0f, 20.0f);
+                    updated |= ImGui::SliderFloat(("X##" + to_string(i)).c_str(), &s.position.x, -100.0f, 100.0f);
+                    updated |= ImGui::SliderFloat(("Y##" + to_string(i)).c_str(), &s.position.y, -100.0f, 100.0f);
+                    updated |= ImGui::SliderFloat(("Z##" + to_string(i)).c_str(), &s.position.z, -100.0f, 100.0f);
                     ImGui::TreePop();
                 }
     
