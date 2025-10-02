@@ -60,7 +60,7 @@ int build_bvh_recursive(
 
     // median split: find mid by nth_element
     int mid = (start + end) / 2;
-    std::nth_element(indices.begin() + start, indices.begin() + mid, indices.begin() + end,
+    nth_element(indices.begin() + start, indices.begin() + mid, indices.begin() + end,
         [&](int a, int b){
             AABB ba = AABB::from_sphere(spheres[a]);
             AABB bb = AABB::from_sphere(spheres[b]);
@@ -69,7 +69,6 @@ int build_bvh_recursive(
             return ca[axis] < cb[axis];
         });
 
-    // handle degenerate split: if all centroids equal on axis, fallback to equal split
     bool degenerate = true;
     {
         AABB fa = AABB::from_sphere(spheres[indices[start]]);
@@ -131,7 +130,7 @@ bool bvh_scene_intersect(
     bool hit_any = false;
 
     // iterative stack
-    std::vector<int> stack;
+    vector<int> stack;
     stack.reserve(64);
     stack.push_back(0); // Root
 
@@ -183,24 +182,6 @@ Vec3f refract(const Vec3f &I, const Vec3f &N, const float &refractive_index) {
     return k < 0 ? Vec3f(0,0,0) : I*eta + n*(eta * cosi - sqrtf(k));
 }
 
-bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const Scene &scene, Vec3f &hit, Vec3f &N, Material &material) {
-    float dist_i;
-    float spheres_dist = numeric_limits<float>::max();
-
-    for (size_t i=0; i < scene.spheres.size(); i++) {
-        // Account for overlapping Sphere
-        if (scene.spheres[i].ray_intersect(orig, dir, dist_i) && dist_i < spheres_dist) {
-            spheres_dist = dist_i;
-            hit = orig + dir*dist_i;
-            N = (hit - scene.spheres[i].center).normalize();
-            material = scene.spheres[i].material;
-        }
-    }
-
-    // Set to background color if too far
-    return spheres_dist<1000;
-}
-
 Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t depth=0) {
     Vec3f point, N;
     Material material;
@@ -243,7 +224,7 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t d
         Vec3f shadow_orig = light_dir*N < 0 ? point - N*1e-3 : point + N*1e-3;
         Vec3f shadow_pt, shadow_N;
         Material tmpmaterial;
-        if (scene_intersect(shadow_orig, light_dir, scene, shadow_pt, shadow_N, tmpmaterial) && (shadow_pt-shadow_orig).norm() < light_distance)
+        if (bvh_scene_intersect(shadow_orig, light_dir, scene.spheres, scene.scene_bvh, scene.bvh_order, shadow_pt, shadow_N, tmpmaterial) && (shadow_pt-shadow_orig).norm() < light_distance)
             continue;
 
         diffuse_light_intensity  += scene.lights[i].intensity * max(0.f, light_dir*N);
