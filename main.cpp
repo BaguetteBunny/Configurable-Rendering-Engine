@@ -371,7 +371,7 @@ int main() {
                 if (ImGui::TreeNode(("Position##" + to_string(i)).c_str())) {
                     updated |= ImGui::SliderFloat(("X##" + to_string(i)).c_str(), &s.center.x, -20.0f, 20.0f);
                     updated |= ImGui::SliderFloat(("Y##" + to_string(i)).c_str(), &s.center.y, -20.0f, 20.0f);
-                    updated |= ImGui::SliderFloat(("Z##" + to_string(i)).c_str(), &s.center.z, -20.0f, 20.0f);
+                    updated |= ImGui::SliderFloat(("Z##" + to_string(i)).c_str(), &s.center.z, -100.0f, -10.0f);
                     ImGui::TreePop();
                 }
 
