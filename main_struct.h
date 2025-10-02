@@ -49,6 +49,54 @@ struct Light {
     float intensity;
 };
 
+struct AABB {
+    Vec3f minim, maxim;
+    AABB() {
+        minim = Vec3f(numeric_limits<float>::infinity(), numeric_limits<float>::infinity(), numeric_limits<float>::infinity());
+        maxim = Vec3f(-numeric_limits<float>::infinity(), -numeric_limits<float>::infinity(), -numeric_limits<float>::infinity());
+    }
+    void expand(const AABB &o) {
+        minim.x = min(minim.x, o.minim.x);
+        minim.y = min(minim.y, o.minim.y);
+        minim.z = min(minim.z, o.minim.z);
+
+        maxim.x = max(maxim.x, o.maxim.x);
+        maxim.y = max(maxim.y, o.maxim.y);
+        maxim.z = max(maxim.z, o.maxim.z);
+    }
+    void expand(const Vec3f &p) {
+        minim.x = min(minim.x, p.x);
+        minim.y = min(minim.y, p.y);
+        minim.z = min(minim.z, p.z);
+
+        maxim.x = max(maxim.x, p.x);
+        maxim.y = max(maxim.y, p.y);
+        maxim.z = max(maxim.z, p.z);
+    }
+    float surface_area() const {
+        Vec3f d = maxim - minim;
+        return 2.f * (d.x*d.y + d.y*d.z + d.z*d.x);
+    }
+
+    // Make AABB for Sphere
+    static AABB from_sphere(const Sphere &s) {
+        AABB b;
+        Vec3f rvec(s.radius, s.radius, s.radius);
+        b.minim = s.center - rvec;
+        b.maxim = s.center + rvec;
+        return b;
+    }
+};
+
+struct BVHNode {
+    AABB box;
+    int left;   // Left child idx (or -1)
+    int right;  // Right child idx (or -1)
+    int start;  // Start idx into ord primitive list (leaf)
+    int count;  // N of primitives (leaf)
+    BVHNode() : left(-1), right(-1), start(-1), count(0) {}
+};
+
 struct Scene {
     Scene(const vector<Sphere> &s, const vector<Light> &l, const map<string, Material> &m, const float &f):
     spheres(s), lights(l), materials(m), FOV(f) {}
@@ -58,6 +106,8 @@ struct Scene {
     map<string, Material> materials;
     float FOV;
     unsigned char* bg_data = nullptr;
+    vector<BVHNode> scene_bvh;
+    vector<int> bvh_order;
 
     ~Scene() {if (bg_data) stbi_image_free(bg_data);}
 };

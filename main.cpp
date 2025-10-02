@@ -17,6 +17,150 @@ const float PI = 3.14159265358979323846;
 const int frame_width = 1920;
 const int frame_height = 1080;
 
+int build_bvh_recursive(
+    vector<BVHNode> &nodes,
+    vector<int> &ordered_indices,
+    vector<int> &indices,
+    const vector<Sphere> &spheres,
+    int start, int end,
+    int maxLeafSize = 4)
+{
+    // Init node
+    int node_index = (int)nodes.size();
+    nodes.emplace_back();
+    BVHNode &node = nodes.back();
+
+    // Compute bounding box
+    AABB bbox;
+    AABB centroid_bbox;
+
+    for (int i = start; i < end; ++i) {
+        int idx = indices[i];
+        AABB b = AABB::from_sphere(spheres[idx]);
+        bbox.expand(b);
+        Vec3f centroid = (b.minim + b.maxim) * 0.5f;
+        centroid_bbox.expand(centroid);
+    }
+    node.box = bbox;
+
+    int count = end - start;
+    if (count <= maxLeafSize) {
+        // Primitive to ordered list
+        node.start = (int)ordered_indices.size();
+        node.count = count;
+        for (int i = start; i < end; ++i) ordered_indices.push_back(indices[i]);
+        return node_index;
+    }
+
+    // Choose split axis
+    Vec3f ext = centroid_bbox.maxim - centroid_bbox.minim;
+    int axis = 0;
+    if (ext.y > ext.x) axis = 1;
+    if (ext.z > ext[axis]) axis = 2;
+
+    // median split: find mid by nth_element
+    int mid = (start + end) / 2;
+    std::nth_element(indices.begin() + start, indices.begin() + mid, indices.begin() + end,
+        [&](int a, int b){
+            AABB ba = AABB::from_sphere(spheres[a]);
+            AABB bb = AABB::from_sphere(spheres[b]);
+            Vec3f ca = (ba.minim + ba.maxim) * 0.5f;
+            Vec3f cb = (bb.minim + bb.maxim) * 0.5f;
+            return ca[axis] < cb[axis];
+        });
+
+    // handle degenerate split: if all centroids equal on axis, fallback to equal split
+    bool degenerate = true;
+    {
+        AABB fa = AABB::from_sphere(spheres[indices[start]]);
+        Vec3f ca = (fa.minim + fa.maxim) * 0.5f;
+        for (int i = start+1; i < end; ++i) {
+            AABB fb = AABB::from_sphere(spheres[indices[i]]);
+            Vec3f cb = (fb.minim + fb.maxim) * 0.5f;
+            if (cb[axis] != ca[axis]) { degenerate = false; break; }
+        }
+    }
+    if (degenerate) {
+        mid = start + (count/2);
+        // Avoid inf recursion
+        sort(indices.begin()+start, indices.begin()+end);
+    }
+
+    // Build children
+    node.left = build_bvh_recursive(nodes, ordered_indices, indices, spheres, start, mid, maxLeafSize);
+    node.right = build_bvh_recursive(nodes, ordered_indices, indices, spheres, mid, end, maxLeafSize);
+    return node_index;
+}
+
+void build_bvh(const vector<Sphere> &spheres, vector<BVHNode> &out_nodes, vector<int> &out_ordered_indices) {
+    out_nodes.clear();
+    out_ordered_indices.clear();
+    int n = (int)spheres.size();
+    if (n == 0) return;
+    vector<int> indices(n);
+    for (int i = 0; i < n; ++i) indices[i] = i;
+    build_bvh_recursive(out_nodes, out_ordered_indices, indices, spheres, 0, n, 4);
+}
+
+bool ray_intersect_aabb(const Vec3f &orig, const Vec3f &dir, const Vec3f &invdir, const AABB &b, float t_min = 0.0001f, float t_max = numeric_limits<float>::infinity()) {
+    // Compute intersection interval for each axis
+    for (int a = 0; a < 3; ++a) {
+        float t0 = (b.minim[a] - orig[a]) * invdir[a];
+        float t1 = (b.maxim[a] - orig[a]) * invdir[a];
+        if (invdir[a] < 0.0f) swap(t0, t1);
+        t_min = t0 > t_min ? t0 : t_min;
+        t_max = t1 < t_max ? t1 : t_max;
+        if (t_max <= t_min) return false;
+    }
+    return true;
+}
+
+bool bvh_scene_intersect(
+    const Vec3f &orig,
+    const Vec3f &dir,
+    const vector<Sphere> &spheres,
+    const vector<BVHNode> &nodes,
+    const vector<int> &ordered_indices,
+    Vec3f &hit,
+    Vec3f &N,
+    Material &material)
+{
+    if (nodes.empty()) return false;
+    Vec3f invdir(1.f/dir.x, 1.f/dir.y, 1.f/dir.z);
+    float best_dist = numeric_limits<float>::max();
+    bool hit_any = false;
+
+    // iterative stack
+    std::vector<int> stack;
+    stack.reserve(64);
+    stack.push_back(0); // Root
+
+    while (!stack.empty()) {
+        int node_idx = stack.back(); stack.pop_back();
+        const BVHNode &node = nodes[node_idx];
+
+        if (!ray_intersect_aabb(orig, dir, invdir, node.box, 0.0001f, best_dist)) continue;
+
+        if (node.count > 0) {
+            for (int i = 0; i < node.count; ++i) {
+                int sphere_idx = ordered_indices[node.start + i];
+                float t;
+                if (spheres[sphere_idx].ray_intersect(orig, dir, t) && t < best_dist) {
+                    best_dist = t;
+                    hit = orig + dir * t;
+                    N = (hit - spheres[sphere_idx].center).normalize();
+                    material = spheres[sphere_idx].material;
+                    hit_any = true;
+                }
+            }
+        } else { // Push children
+            if (node.right >= 0) stack.push_back(node.right);
+            if (node.left >= 0)  stack.push_back(node.left);
+        }
+    }
+    return hit_any;
+}
+
 // Direction vector --- See Phong's algorithm
 Vec3f reflect(const Vec3f &I, const Vec3f &N) {
     return I - N*2.f*(I*N);
@@ -64,7 +208,7 @@ Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Scene &scene, size_t d
     const float inv_maxcol = 1/255.0f;
 
     // Compute background texture & pixel coords
-    if (depth > 4 || !scene_intersect(orig, dir, scene, point, N, material)) {
+    if (depth > 4 || !bvh_scene_intersect(orig, dir, scene.spheres, scene.scene_bvh, scene.bvh_order, point, N, material)) {
         float u = 0.5f + atan2f(dir.z, dir.x) * inv_pi * 0.5f;
         float v = 0.5f - asinf(dir.y) * inv_pi;
 
@@ -186,6 +330,7 @@ int main() {
 
     Scene scene(spheres, lights, materials, 1.05); // 60 Deg FOV (Default)
     scene.bg_data = stbi_load("assets/church_of_lutherstadt.jpg", &bg_width, &bg_height, &bg_channels, 3);
+    build_bvh(scene.spheres, scene.scene_bvh, scene.bvh_order);
 
     // Framebuffer
     vector<unsigned char> framebuffer;
@@ -214,18 +359,24 @@ int main() {
                 }
             }
         }
-        framebuffer = render(scene);
+
         glBindTexture(GL_TEXTURE_2D, textureID);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, frame_width, frame_height, GL_RGB, GL_UNSIGNED_BYTE, framebuffer.data());
 
         // Start a new ImGui frame
+        bool updated = false;
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
         ImGui::Begin("Hello");
         ImGui::GetBackgroundDrawList()->AddImage(textureID, ImVec2(0, 0), ImGui::GetIO().DisplaySize);
-        ImGui::SliderFloat("Sphere Radius", &scene.spheres[3].radius, 0.1f, 10.0f);
+        updated |= ImGui::SliderFloat("Sphere Radius", &scene.spheres[3].radius, 0.1f, 10.0f);
+
+        if (updated) {
+            build_bvh(scene.spheres, scene.scene_bvh, scene.bvh_order);
+            framebuffer = render(scene);           
+        }
         ImGui::End();
 
         ImGui::Render();
