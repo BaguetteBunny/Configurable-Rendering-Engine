@@ -1,3 +1,4 @@
+#define SDL_STATIC
 #include <fstream>
 #include <iostream>
 #include <map>
