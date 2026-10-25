@@ -59,7 +59,6 @@ Run the executable from the repository root, since the program loads `assets/fon
 
 - [tinyraytracer](https://github.com/ssloy/tinyraytracer/wiki) by Dmitry V. Sokolov for the tutorial this project is based on.
 - [Dear ImGui](https://github.com/ocornut/imgui) for the interface.
-- Environment map: [source and licence]. <!-- TODO: credit the HDRI/image source -->
 
 ## License
 
