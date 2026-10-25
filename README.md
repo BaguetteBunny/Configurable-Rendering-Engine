@@ -41,8 +41,8 @@ The menu lists every sphere and light in the scene.
 ## Building and running
 
 ```bash
-git clone https://github.com/BaguetteBunny/Configurable-Rendering-Engine
-cd Configurable-Rendering-Engines
+git clone https://github.com/BaguetteBunny/configurable-rendering-engine
+cd configurable-rendering-engines
 g++ -std=c++17 -O3 -march=native -mfma -ffast-math -fopenmp -Iinclude -Iimgui -Iimgui/backends -Iinclude/SDL3 main.cpp imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp imgui/backends/imgui_impl_sdl3.cpp imgui/backends/imgui_impl_opengl3.cpp -Llib -lSDL3 -lmingw32 -lopengl32 -lgdi32 -o main.exe
 ./main.exe
 ```
